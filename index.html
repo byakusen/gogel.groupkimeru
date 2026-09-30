@@ -154,6 +154,9 @@ tfoot td{font-family:"Zen Maru Gothic",sans-serif;font-size:clamp(11px,1.1vw,15p
   <section class="screen on" id="setup">
     <div class="top">
       <h1>団体戦 チーム決め ― じゅんび</h1>
+      <button class="tbtn" id="saveBtn">💾 名前をファイルに保存</button>
+      <button class="tbtn" id="loadBtn">📂 保存したファイルを開く</button>
+      <input type="file" id="loadIn" accept=".json,application/json" hidden>
       <button class="tbtn" id="sampleBtn">ためしに名前を入れる</button>
       <button class="tbtn" id="clearBtn">名前をぜんぶ消す</button>
     </div>
@@ -252,6 +255,37 @@ tfoot td{font-family:"Zen Maru Gothic",sans-serif;font-size:clamp(11px,1.1vw,15p
     const out = [[],[],[],[],[]]; let k=0;
     for(let i=0;i<N && i<pool.length;i++){ out[Math.min(4,Math.floor(k/T))].push(pool[i]); k++; }
     st.raw = out.map(a=>a.join('\n')); save(); fillSetup();
+  });
+  // ファイルに保存・読み込み
+  function flash(text, warn){ const m=$('setupMsg'); m.textContent=text; m.className='msg hint'+(warn?' warn':''); setTimeout(refreshSetup, 3500); }
+  $('saveBtn').addEventListener('click', ()=>{
+    const d = new Date(), pad = n=>String(n).padStart(2,'0');
+    const fname = `団体戦_名前_${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
+    const data = { app:'teamRoulette', version:1, cls:st.cls, teams:st.teams,
+      levels: LV.map((name,i)=>({ level:name, names:parse(st.raw[i]||'') })) };
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    flash(`「${fname}」を保存しました（ダウンロードフォルダに入ります）。`);
+  });
+  $('loadBtn').addEventListener('click', ()=> $('loadIn').click());
+  $('loadIn').addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const d = JSON.parse(r.result);
+        if(!d || !Array.isArray(d.levels) || d.levels.length!==5) throw 0;
+        st.cls = parseInt(d.cls,10) || st.cls;
+        st.teams = Math.max(1, Math.min(12, parseInt(d.teams,10) || st.teams));
+        st.raw = d.levels.map(l=>(l.names||[]).join('\n'));
+        save(); fillSetup();
+        flash(`「${f.name}」を読みこみました。`);
+      }catch(err){ flash('このファイルは読みこめません。このアプリで保存したファイルを選んでください。', true); }
+      e.target.value = '';
+    };
+    r.readAsText(f);
   });
   $('clearBtn').addEventListener('click', ()=>{ st.raw=['','','','','']; save(); fillSetup(); });
 
