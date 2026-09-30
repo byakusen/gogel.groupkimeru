@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>団体戦 チーム決めルーレット</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --board:#23473a; --board-deep:#1a372d; --frame:#8a5a36; --frame-dark:#6b4327;
+  --chalk:#f3f1e7; --chalk-dim:rgba(243,241,231,.55); --chalk-line:rgba(243,241,231,.22);
+  --yellow:#ffe066; --btn:#ffe066; --btn-ink:#3a2a10;
+  --c0:#ff8fa3; --c1:#ffb35c; --c2:#b5e36b; --c3:#7cc8ff; --c4:#c9b0ff;
+  --warn:#ffb35c;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --board:#1f3f33; --board-deep:#152c24; --frame:#6e4829; --frame-dark:#523519; }
+}
+:root[data-theme="dark"]{ --board:#1f3f33; --board-deep:#152c24; --frame:#6e4829; --frame-dark:#523519; }
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;height:100%;overflow:hidden;
+  background:var(--frame);
+  color:var(--chalk);
+  font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Meiryo",sans-serif;
+}
+.board{
+  position:absolute;inset:clamp(6px,1.2vw,14px);
+  top:calc(env(safe-area-inset-top,0px) + clamp(6px,1.2vw,14px));
+  bottom:calc(env(safe-area-inset-bottom,0px) + clamp(6px,1.2vw,14px));
+  background:radial-gradient(ellipse at 30% 20%, var(--board) 0%, var(--board-deep) 100%);
+  border-radius:6px;
+  box-shadow:inset 0 0 0 4px var(--frame-dark), inset 0 0 40px rgba(0,0,0,.35);
+  padding:clamp(8px,1.4vw,18px);
+  display:flex;flex-direction:column;gap:clamp(6px,1vh,12px);
+}
+.screen{display:none;flex:1;min-height:0;flex-direction:column;gap:clamp(6px,1vh,12px)}
+.screen.on{display:flex}
+
+/* header */
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1{margin:0;font-family:"Klee One",serif;font-weight:600;font-size:clamp(18px,2.4vw,30px);letter-spacing:.04em;margin-right:auto}
+.tbtn{
+  font:inherit;font-weight:700;font-size:clamp(12px,1.2vw,15px);
+  background:transparent;color:var(--chalk);border:2px solid var(--chalk-line);
+  border-radius:999px;padding:6px 14px;cursor:pointer;
+}
+.tbtn:hover{border-color:var(--chalk-dim)}
+.tbtn:disabled{opacity:.35;cursor:default}
+button:focus-visible,textarea:focus-visible,input:focus-visible,td:focus-visible,th:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+
+/* ===== setup ===== */
+.settings{display:flex;gap:clamp(10px,2vw,28px);align-items:center;flex-wrap:wrap;font-size:clamp(14px,1.5vw,19px)}
+.settings label{display:flex;align-items:center;gap:8px;font-weight:700}
+.num{
+  width:4.2em;font:inherit;font-weight:900;font-size:1.2em;text-align:center;
+  background:rgba(0,0,0,.2);color:var(--yellow);border:2px solid var(--chalk-line);border-radius:8px;padding:4px 2px;
+}
+.hint{color:var(--chalk-dim);font-size:.9em}
+.hint.warn{color:var(--warn)}
+.levels{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(6px,1vw,14px)}
+.lvcol{display:flex;flex-direction:column;min-height:0;gap:6px}
+.lvhead{display:flex;align-items:baseline;justify-content:space-between;gap:6px;font-weight:900;font-size:clamp(14px,1.6vw,20px)}
+.lvhead .cnt{font-size:.75em;font-weight:700;color:var(--chalk-dim)}
+.lvcol textarea{
+  flex:1;min-height:0;resize:none;width:100%;
+  font-family:"Klee One",serif;font-size:clamp(14px,1.4vw,19px);line-height:1.55;
+  background:rgba(0,0,0,.18);color:var(--chalk);
+  border:2px dashed var(--lvc);border-radius:10px;padding:8px 10px;
+}
+.lvcol textarea::placeholder{color:var(--chalk-dim)}
+.setup-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.setup-foot .msg{margin-right:auto;font-size:clamp(13px,1.3vw,17px)}
+.go{
+  font:inherit;font-weight:900;font-size:clamp(16px,1.9vw,24px);
+  background:var(--btn);color:var(--btn-ink);border:none;border-radius:14px;
+  padding:10px 28px;cursor:pointer;box-shadow:0 5px 0 #c9a82e;
+}
+.go:active{transform:translateY(3px);box-shadow:0 2px 0 #c9a82e}
+
+/* ===== draw ===== */
+.main{flex:1;min-height:0;display:grid;grid-template-columns:1fr minmax(240px,28%);gap:clamp(8px,1.4vw,18px)}
+.tablewrap{min-height:0;min-width:0;overflow:auto}
+table{width:100%;height:100%;border-collapse:collapse;table-layout:fixed;font-family:"Klee One",serif}
+th,td{border:2px solid var(--chalk-line);text-align:center;padding:2px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+thead th{font-family:"Zen Maru Gothic",sans-serif;font-weight:900;font-size:clamp(14px,1.7vw,22px);height:2.2em}
+th.lvlabel{
+  width:clamp(56px,6vw,90px);font-family:"Zen Maru Gothic",sans-serif;font-weight:900;
+  font-size:clamp(18px,2.2vw,30px);color:var(--lvc);cursor:pointer;
+}
+th.lvlabel:hover{background:rgba(255,255,255,.06)}
+th.lvlabel.active{background:var(--lvc);color:var(--board-deep)}
+th.lvlabel small{display:block;font-size:.7em;opacity:.8}
+td.cell{font-size:clamp(13px,1.6vw,22px);cursor:pointer;color:var(--chalk)}
+td.cell.filled{color:var(--lvc);font-weight:600}
+td.cell.dis{color:var(--chalk-line);cursor:default;background:rgba(0,0,0,.12)}
+td.cell.sel{box-shadow:inset 0 0 0 4px var(--yellow);background:rgba(255,224,102,.14)}
+td.cell.spin{color:var(--yellow)}
+td.cell.pop{animation:pop .55s ease-out}
+@keyframes pop{0%{background:rgba(255,224,102,.55)}100%{background:transparent}}
+tfoot td{font-family:"Zen Maru Gothic",sans-serif;font-size:clamp(11px,1.1vw,15px);color:var(--chalk-dim);height:1.9em}
+
+.panel{
+  min-height:0;display:flex;flex-direction:column;align-items:stretch;gap:clamp(6px,1.2vh,14px);
+  border:3px solid var(--chalk-line);border-radius:16px;padding:clamp(10px,1.4vw,18px);
+}
+.target{text-align:center;font-weight:900;font-size:clamp(15px,1.8vw,24px)}
+.target .lvtag{display:inline-block;padding:2px 12px;border-radius:999px;background:var(--lvc);color:var(--board-deep);margin-right:6px}
+.window{
+  flex:1;min-height:90px;display:flex;align-items:center;justify-content:center;
+  border-radius:12px;background:rgba(0,0,0,.25);
+  font-family:"Klee One",serif;font-weight:600;
+  font-size:clamp(28px,4.4vw,64px);color:var(--chalk);text-align:center;padding:6px;line-height:1.2;
+  word-break:break-all;
+}
+.window.done{color:var(--yellow);animation:land .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes land{0%{transform:scale(.7)}100%{transform:scale(1)}}
+.window .sub{display:block;font-family:"Zen Maru Gothic",sans-serif;font-size:.32em;font-weight:700;color:var(--chalk-dim);margin-top:.3em}
+.spinbtn{
+  font:inherit;font-weight:900;font-size:clamp(20px,2.6vw,34px);
+  background:var(--btn);color:var(--btn-ink);border:none;border-radius:16px;
+  padding:clamp(10px,1.6vh,18px) 10px;cursor:pointer;box-shadow:0 6px 0 #c9a82e;
+}
+.spinbtn:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #c9a82e}
+.spinbtn:disabled{background:rgba(243,241,231,.15);color:var(--chalk-dim);box-shadow:none;cursor:default}
+.left{font-size:clamp(12px,1.15vw,15px);color:var(--chalk-dim);max-height:24%;overflow:auto}
+.left .chips{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px}
+.left .chip{font-family:"Klee One",serif;color:var(--lvc);border:1.5px solid var(--lvc);border-radius:999px;padding:0 8px}
+.keyhint{font-size:11px;color:var(--chalk-dim);text-align:center}
+
+@media (max-width:760px){
+  .levels{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  .main{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .panel{order:-1;display:grid;grid-template-columns:1fr auto;align-items:center}
+  .panel .target{grid-column:1/-1}
+  .panel .window{min-height:60px;font-size:28px}
+  .panel .left,.panel .keyhint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .window.done,td.cell.pop{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="board">
+
+  <!-- 設定画面 -->
+  <section class="screen on" id="setup">
+    <div class="top">
+      <h1>団体戦 チーム決め ― じゅんび</h1>
+      <button class="tbtn" id="sampleBtn">ためしに名前を入れる</button>
+      <button class="tbtn" id="clearBtn">名前をぜんぶ消す</button>
+    </div>
+    <div class="settings">
+      <label>クラスの人数 <input class="num" id="clsIn" type="number" min="1" max="60"> 人</label>
+      <label>チーム数 <input class="num" id="teamIn" type="number" min="1" max="12"> チーム</label>
+      <span class="hint" id="perTeam"></span>
+    </div>
+    <div class="levels" id="levels"></div>
+    <div class="setup-foot">
+      <span class="msg hint" id="setupMsg"></span>
+      <button class="go" id="startBtn">組み合わせを決める</button>
+    </div>
+  </section>
+
+  <!-- 抽選画面 -->
+  <section class="screen" id="draw">
+    <div class="top">
+      <h1>団体戦 チーム決め</h1>
+      <button class="tbtn" id="soundBtn" aria-pressed="true">🔊 音あり</button>
+      <button class="tbtn" id="undoBtn">ひとつもどす</button>
+      <button class="tbtn" id="resetBtn">さいしょから</button>
+      <button class="tbtn" id="backBtn">名前の入力にもどる</button>
+    </div>
+    <div class="main">
+      <div class="tablewrap"><table id="grid"></table></div>
+      <div class="panel" id="panel">
+        <div class="target" id="target"></div>
+        <div class="window" id="win"></div>
+        <button class="spinbtn" id="spinBtn">ルーレット！</button>
+        <div class="left" id="left"></div>
+        <div class="keyhint">スペースキーでもルーレットが回ります</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const LV = ['レベル5','レベル4','レベル3','レベル1','レベル0'];
+  const MASK = ['①','②','③','④','⑤']; // 抽選画面ではレベル名を出さない
+  const LVC = ['var(--c0)','var(--c1)','var(--c2)','var(--c3)','var(--c4)'];
+  const KEY = 'teamRoulette.v1';
+  const $ = id => document.getElementById(id);
+
+  let st = { cls:35, teams:7, raw:['','','','',''] };
+  try{ const s = JSON.parse(localStorage.getItem(KEY)); if(s && Array.isArray(s.raw)) st = Object.assign(st, s); }catch(e){}
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} }
+
+  const parse = t => t.split(/[\n,、，]+/).map(s=>s.trim()).filter(Boolean);
+  const teamName = i => String.fromCharCode(65+i) + 'チーム';
+
+  /* ===== 設定画面 ===== */
+  const levelsEl = $('levels');
+  LV.forEach((name,i)=>{
+    const col = document.createElement('div');
+    col.className='lvcol'; col.style.setProperty('--lvc', LVC[i]);
+    col.innerHTML = `<div class="lvhead"><span style="color:${LVC[i]}">${name}</span><span class="cnt" id="cnt${i}"></span></div>
+      <textarea id="ta${i}" placeholder="1行に1人ずつ&#10;名前を書きます" aria-label="${name}の子の名前"></textarea>`;
+    levelsEl.appendChild(col);
+  });
+  function fillSetup(){
+    $('clsIn').value = st.cls; $('teamIn').value = st.teams;
+    LV.forEach((_,i)=> $('ta'+i).value = st.raw[i] || '');
+    refreshSetup();
+  }
+  function refreshSetup(){
+    const T = st.teams;
+    let total = 0;
+    LV.forEach((_,i)=>{
+      const n = parse(st.raw[i]||'').length; total += n;
+      const c = $('cnt'+i);
+      c.textContent = `${n}人（目安${T}人）`;
+      c.style.color = n===T ? 'var(--chalk-dim)' : 'var(--warn)';
+    });
+    const per = st.cls / T;
+    $('perTeam').textContent = T>0 ? `1チーム ${Math.floor(per)}〜${Math.ceil(per)}人になります` : '';
+    const m = $('setupMsg');
+    if(total===0){ m.textContent='レベルごとに子どもの名前を書いてください。'; m.className='msg hint'; }
+    else if(total!==st.cls){ m.textContent=`入力した名前は ${total}人です。クラスの人数（${st.cls}人）とちがいます。`; m.className='msg hint warn'; }
+    else { m.textContent=`${total}人 ぜんいん入力できています。`; m.className='msg hint'; }
+  }
+  $('clsIn').addEventListener('input', e=>{
+    const v = parseInt(e.target.value,10);
+    if(v>0){ st.cls=v; st.teams=Math.max(1,Math.min(12,Math.round(v/5))); $('teamIn').value=st.teams; save(); refreshSetup(); }
+  });
+  $('teamIn').addEventListener('input', e=>{
+    const v = parseInt(e.target.value,10);
+    if(v>0 && v<=12){ st.teams=v; save(); refreshSetup(); }
+  });
+  LV.forEach((_,i)=> $('ta'+i).addEventListener('input', e=>{ st.raw[i]=e.target.value; save(); refreshSetup(); }));
+
+  $('sampleBtn').addEventListener('click', ()=>{
+    const pool = ['はると','ゆい','そうた','めい','ゆうと','さくら','りく','ひなた','はるき','あおい','こうき','ゆな','たいが','りん','いつき','みお','そら','ここな','けんと','ひまり','だいち','ほのか','れん','ゆず','しょう','あかり','かいと','ことね','ゆうま','みゆ','こはく','なな','しゅん','あやね','とうま','まな','りょう','えま','ゆうき','かんな'];
+    const T = st.teams, N = st.cls;
+    const out = [[],[],[],[],[]]; let k=0;
+    for(let i=0;i<N && i<pool.length;i++){ out[Math.min(4,Math.floor(k/T))].push(pool[i]); k++; }
+    st.raw = out.map(a=>a.join('\n')); save(); fillSetup();
+  });
+  $('clearBtn').addEventListener('click', ()=>{ st.raw=['','','','','']; save(); fillSetup(); });
+
+  /* ===== 抽選 ===== */
+  let T, board, pools, cur, hist, spinning=false, sound=true;
+
+  function startDraw(){
+    T = st.teams;
+    board = []; pools = []; hist = [];
+    LV.forEach((_,lv)=>{
+      const names = parse(st.raw[lv]||'');
+      const rows = Math.max(1, Math.ceil(names.length / T));
+      board[lv] = Array.from({length:rows*T}, (_,i)=>({name:null, dis:i>=names.length}));
+      pools[lv] = names.slice();
+    });
+    const first = board.findIndex(b=>b.some(c=>!c.dis));
+    cur = {lv: Math.max(0,first), idx:0};
+    buildGrid(); render(); showWin('');
+  }
+
+  function buildGrid(){
+    const g = $('grid'); let h = '<thead><tr><th></th>';
+    for(let t=0;t<T;t++) h += `<th>${String.fromCharCode(65+t)}</th>`;
+    h += '</tr></thead><tbody>';
+    board.forEach((slots,lv)=>{
+      const rows = slots.length / T;
+      for(let r=0;r<rows;r++){
+        h += `<tr style="--lvc:${LVC[lv]}">`;
+        if(r===0) h += `<th class="lvlabel" rowspan="${rows}" data-lv="${lv}" tabindex="0">${MASK[lv]}<small>${pools[lv].length}人</small></th>`;
+        for(let t=0;t<T;t++){ const idx=r*T+t; h += `<td class="cell" data-lv="${lv}" data-idx="${idx}"></td>`; }
+        h += '</tr>';
+      }
+    });
+    h += '</tbody><tfoot><tr><td></td>';
+    for(let t=0;t<T;t++) h += `<td id="tc${t}"></td>`;
+    h += '</tr></tfoot>';
+    g.innerHTML = h;
+  }
+  const cellEl = (lv,idx) => document.querySelector(`td.cell[data-lv="${lv}"][data-idx="${idx}"]`);
+
+  function render(){
+    board.forEach((slots,lv)=> slots.forEach((c,idx)=>{
+      const el = cellEl(lv,idx);
+      if(!el.classList.contains('spin')) el.textContent = c.dis ? '―' : (c.name || '');
+      el.classList.toggle('filled', !!c.name);
+      el.classList.toggle('dis', c.dis);
+      el.classList.toggle('sel', cur.lv===lv && cur.idx===idx);
+    }));
+    document.querySelectorAll('th.lvlabel').forEach(th=> th.classList.toggle('active', +th.dataset.lv===cur.lv));
+    for(let t=0;t<T;t++){
+      let n=0; board.forEach(s=>s.forEach((c,i)=>{ if(i%T===t && c.name) n++; }));
+      $('tc'+t).textContent = n ? `${n}人` : '';
+    }
+    const slot = board[cur.lv][cur.idx];
+    const panel = $('panel'); panel.style.setProperty('--lvc', LVC[cur.lv]);
+    $('target').innerHTML = `<span class="lvtag">${MASK[cur.lv]}</span>${slot.dis?'':teamName(cur.idx%T)}`;
+    $('spinBtn').disabled = spinning || slot.dis || !!slot.name || pools[cur.lv].length===0;
+    $('spinBtn').textContent = (pools[cur.lv].length===0) ? `${MASK[cur.lv]} ぜんいん決定！` : 'ルーレット！';
+    $('undoBtn').disabled = spinning || hist.length===0;
+    $('resetBtn').disabled = spinning;
+    const p = pools[cur.lv];
+    $('left').innerHTML = p.length ? `のこり ${p.length}人<div class="chips">${p.map(n=>`<span class="chip">${esc(n)}</span>`).join('')}</div>` : '';
+  }
+  const esc = s => s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function showWin(text, sub, done){
+    const w = $('win');
+    w.classList.remove('done'); void w.offsetWidth;
+    w.innerHTML = esc(text) + (sub ? `<span class="sub">${esc(sub)}</span>` : '');
+    if(done) w.classList.add('done');
+  }
+
+  function fill(lv,idx,name){
+    board[lv][idx].name = name;
+    pools[lv].splice(pools[lv].indexOf(name),1);
+    hist.push({lv,idx,name});
+    const el = cellEl(lv,idx); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  }
+  const nextEmpty = lv => board[lv].findIndex(c=>!c.dis && !c.name);
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+  async function spin(){
+    if($('spinBtn').disabled) return;
+    const lv = cur.lv, idx = cur.idx, pool = pools[lv];
+    const pick = pool[Math.floor(Math.random()*pool.length)];
+    spinning = true; render();
+    const el = cellEl(lv,idx); el.classList.add('spin');
+    let d = 45, last = null;
+    if(pool.length>1){
+      while(d < 330){
+        let n; do{ n = pool[Math.floor(Math.random()*pool.length)]; }while(n===last);
+        last = n; showWin(n); el.textContent = n; beep(520+Math.random()*200, .05, .04);
+        await sleep(d); d *= 1.1;
+      }
+    }
+    el.classList.remove('spin');
+    fill(lv, idx, pick);
+    showWin(pick, teamName(idx%T)+' に決定！', true); chime();
+    // 次の空き枠へ
+    const nx = nextEmpty(lv);
+    if(nx >= 0){
+      cur.idx = nx;
+      if(pools[lv].length === 1){
+        render();
+        await sleep(900);
+        const rest = pools[lv][0];
+        fill(lv, nx, rest);
+        showWin(rest, `のこりの1人は ${teamName(nx%T)}`, true); chime();
+      }
+    }
+    spinning = false; render();
+  }
+
+  // 効果音
+  let ac = null;
+  function beep(f, dur, vol){
+    if(!sound) return;
+    try{
+      ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type='triangle'; o.frequency.value=f; g.gain.value=vol;
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime+dur);
+      o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+dur);
+    }catch(e){}
+  }
+  function chime(){ [784,988,1319].forEach((f,i)=>setTimeout(()=>beep(f,.35,.08), i*110)); }
+
+  // 操作
+  $('grid').addEventListener('click', e=>{
+    if(spinning) return;
+    const th = e.target.closest('th.lvlabel');
+    if(th){ selectLevel(+th.dataset.lv); return; }
+    const td = e.target.closest('td.cell');
+    if(td){
+      const lv=+td.dataset.lv, idx=+td.dataset.idx;
+      if(board[lv][idx].dis) return;
+      cur = {lv, idx}; render();
+      const c = board[lv][idx];
+      showWin(c.name || '', c.name ? teamName(idx%T) : '');
+    }
+  });
+  $('grid').addEventListener('keydown', e=>{
+    const th = e.target.closest('th.lvlabel');
+    if(th && (e.key==='Enter')){ e.preventDefault(); if(!spinning) selectLevel(+th.dataset.lv); }
+  });
+  function selectLevel(lv){
+    const nx = nextEmpty(lv);
+    if(nx>=0) cur = {lv, idx:nx};
+    else { let last=0; board[lv].forEach((c,i)=>{ if(!c.dis) last=i; }); cur = {lv, idx:last}; }
+    render();
+    showWin(nx>=0 ? '' : '', nx>=0 ? '' : '');
+    if(nx<0) showWin('', `${MASK[lv]}は ぜんいん決まりました`);
+  }
+  $('spinBtn').addEventListener('click', spin);
+  document.addEventListener('keydown', e=>{
+    if(!$('draw').classList.contains('on')) return;
+    if(e.code==='Space' && e.target.tagName!=='BUTTON'){ e.preventDefault(); spin(); }
+  });
+  $('undoBtn').addEventListener('click', ()=>{
+    const h = hist.pop(); if(!h) return;
+    board[h.lv][h.idx].name = null; pools[h.lv].push(h.name);
+    cur = {lv:h.lv, idx:h.idx}; showWin(''); render();
+  });
+  $('resetBtn').addEventListener('click', ()=>{ startDraw(); });
+  $('soundBtn').addEventListener('click', e=>{
+    sound = !sound; e.currentTarget.textContent = sound ? '🔊 音あり' : '🔇 音なし';
+    e.currentTarget.setAttribute('aria-pressed', sound);
+  });
+
+  $('startBtn').addEventListener('click', ()=>{
+    const total = st.raw.reduce((a,t)=>a+parse(t||'').length,0);
+    if(total===0){ $('setupMsg').textContent='まず、レベルごとに名前を入力してください。'; $('setupMsg').className='msg hint warn'; return; }
+    $('setup').classList.remove('on'); $('draw').classList.add('on');
+    startDraw();
+  });
+  $('backBtn').addEventListener('click', ()=>{
+    if(spinning) return;
+    $('draw').classList.remove('on'); $('setup').classList.add('on'); fillSetup();
+  });
+
+  fillSetup();
+})();
+</script>
+</body>
+</html>
